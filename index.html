@@ -364,16 +364,22 @@
         }
         
         function processStockData(quote, overview, rsiData, macdData, symbol) {
-            // Extract quote data
-            const price = parseFloat(quote['05. price']);
-            const change = parseFloat(quote['09. change']);
-            const changePercent = quote['10. change percent'].replace('%', '');
-            const volume = parseInt(quote['06. volume']);
-            const highPrice = parseFloat(quote['03. high']);
-            const lowPrice = parseFloat(quote['02. low']);
-            const openPrice = parseFloat(quote['07. previous close']);
+            // Extract quote data dengan error handling
+            const price = parseFloat(quote['05. price']) || 0;
+            const change = parseFloat(quote['09. change']) || 0;
             
-            // Extract fundamental data
+            // Fix untuk change percent - tambahin safety check
+            let changePercent = '0';
+            if (quote['10. change percent']) {
+                changePercent = quote['10. change percent'].replace('%', '');
+            }
+            
+            const volume = parseInt(quote['06. volume']) || 0;
+            const highPrice = parseFloat(quote['03. high']) || 0;
+            const lowPrice = parseFloat(quote['02. low']) || 0;
+            const openPrice = parseFloat(quote['07. previous close']) || 0;
+            
+            // Extract fundamental data dengan default values
             const peRatio = parseFloat(overview['PERatio']) || 0;
             const marketCap = parseFloat(overview['MarketCapitalization']) || 0;
             const dividendYield = parseFloat(overview['DividendYield']) * 100 || 0;
@@ -393,19 +399,23 @@
                 const rsiTimeSeries = rsiData['Technical Analysis: RSI'];
                 if (rsiTimeSeries) {
                     const latestRsiDate = Object.keys(rsiTimeSeries)[0];
-                    rsi = parseFloat(rsiTimeSeries[latestRsiDate]['RSI']);
+                    if (latestRsiDate && rsiTimeSeries[latestRsiDate]) {
+                        rsi = parseFloat(rsiTimeSeries[latestRsiDate]['RSI']) || 50;
+                    }
                 }
                 
                 // Get latest MACD values
                 const macdTimeSeries = macdData['Technical Analysis: MACD'];
                 if (macdTimeSeries) {
                     const latestMacdDate = Object.keys(macdTimeSeries)[0];
-                    const macdEntry = macdTimeSeries[latestMacdDate];
-                    macd = parseFloat(macdEntry['MACD']);
-                    macdSignal = parseFloat(macdEntry['MACD_Signal']);
+                    if (latestMacdDate && macdTimeSeries[latestMacdDate]) {
+                        const macdEntry = macdTimeSeries[latestMacdDate];
+                        macd = parseFloat(macdEntry['MACD']) || 0;
+                        macdSignal = parseFloat(macdEntry['MACD_Signal']) || 0;
+                    }
                 }
             } catch (e) {
-                console.warn('Technical indicators not available, using defaults');
+                console.warn('Technical indicators not available:', e.message);
             }
             
             // Calculate additional metrics
@@ -446,7 +456,7 @@
                 timestamp: new Date().toLocaleString('id-ID')
             };
         }
-        
+
         function displayResults(data, analysisType) {
             const resultsDiv = document.getElementById('results');
             let html = '';
